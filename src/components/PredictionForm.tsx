@@ -30,9 +30,24 @@ const PredictionForm = () => {
   });
   const [prediction, setPrediction] = useState<string | null>(null);
 
-  const handlePredict = () => {
+  const handlePredict = async () => {
     if (!form.team1 || !form.team2 || !form.toss_winner) return;
-    setPrediction(form.toss_winner);
+
+    try {
+      const res = await fetch("http://localhost:8000/api/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (data.winner) {
+        setPrediction(`${data.winner} (${data.confidence}% confidence)`);
+      } else {
+        setPrediction(data.error || "Prediction failed");
+      }
+    } catch {
+      setPrediction("Failed to connect to ML server.");
+    }
   };
 
   const tossTeams = [form.team1, form.team2].filter(Boolean);
@@ -49,9 +64,9 @@ const PredictionForm = () => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Batting Team</Label>
+              <Label className="text-xs text-muted-foreground">Team 1</Label>
               <Select value={form.team1} onValueChange={(v) => setForm({ ...form, team1: v, toss_winner: "" })}>
-                <SelectTrigger><SelectValue placeholder="Select batting team" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select team 1" /></SelectTrigger>
                 <SelectContent>
                   {IPL_TEAMS.filter((t) => t !== form.team2).map((t) => (
                     <SelectItem key={t} value={t}>{t}</SelectItem>
@@ -60,9 +75,9 @@ const PredictionForm = () => {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Bowling Team</Label>
+              <Label className="text-xs text-muted-foreground">Team 2</Label>
               <Select value={form.team2} onValueChange={(v) => setForm({ ...form, team2: v, toss_winner: "" })}>
-                <SelectTrigger><SelectValue placeholder="Select bowling team" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select team 2" /></SelectTrigger>
                 <SelectContent>
                   {IPL_TEAMS.filter((t) => t !== form.team1).map((t) => (
                     <SelectItem key={t} value={t}>{t}</SelectItem>
